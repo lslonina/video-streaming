@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  video-streaming:
+    image: video-streaming
+    build:
+      context: ./video-streaming-service
+      dockerfile: Dockerfile
+    container_name: video-streaming
+    ports:
+      - "4000:80"
+    environment:
+      - PORT=80
+    restart: "no"
+  
+  video-storage:
+    image: azure-video-storage-service
+    build:
+      context: ./azure-video-storage-service
+      dockerfile: Dockerfile
+    container_name: video-storage
+    hostname: video-storage
+    environment:
+      - PORT=80
+      - STORAGE_ACCOUNT_NAME=devstoreaccount1
+      - STORAGE_ACCESS_KEY=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
+      - STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:7777/devstoreaccount1;
+    ports:
+      - "4001:80"
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    hostname: azurite
+    restart: always
+    container_name: azurite
+    command: "azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl"
+    volumes:
+      - c:/azurite:/workspace
+    ports:
+      - "7777:7777"
+      - "8888:8888"
+      - "9999:9999"
