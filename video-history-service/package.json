@@ -1,5 +1,5 @@
 {
-  "name": "azure-video-storage-service",
+  "name": "video-history-service",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,12 +8,14 @@
     "start:dev": "nodemon --legacy-watch ./src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "azure-storage": "^2.10.6",
-    "express": "^4.17.2",
+  "devDependencies": {
     "nodemon": "^2.0.15"
+  },
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "express": "^4.17.2",
+    "mongodb": "^4.2.2"
   }
 }
