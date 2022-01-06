@@ -71,6 +71,30 @@ services:
       - rabbit
     restart: "no"
 
+  recommendations:
+    image: recommendations
+    build: 
+      context: ./video-recommendation-service
+      dockerfile: Dockerfile-dev
+    container_name: recommendations
+    volumes:
+      - "D:/npm-cache/recommendation:/root/.npm:z"
+      - "./video-recommendation-service/src:/usr/src/app/src:z"
+    ports:
+     - "4004:80"
+    environment:
+      - PORT=80
+      - RABBIT=amqp://guest:guest@rabbit:5672
+      - DB_HOST=video-db:27017
+      - DB_NAME=video-recommendations
+      - DB_USERNAME=user
+      - DB_PASSWORD=pass
+      - NODE_ENV=development
+    depends_on:
+      - video-db
+      - rabbit
+    restart: "no"
+  
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
     hostname: azurite
@@ -87,9 +111,15 @@ services:
   rabbit:
     image: rabbitmq:3.9.11-management-alpine
     container_name: rabbit
+    volumes:
+      - "d:/rabbitmq/data:/var/lib/rabbitmq"
+      - "d:/rabbitmq/logs:/var/log/rabbitmq"
     ports:
       - "5672:5672"
       - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_VHOST=/
+    hostname: rabbit_node
     expose:
       - "5762"
       - "15672"

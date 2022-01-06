@@ -1,7 +1,7 @@
-const express = require("express")
+const express = require("express");
 const mongodb = require("mongodb");
-const bodyParser = require('body-parser');
-const amqp = require("amqplib");
+const amqp = require('amqplib');
+const bodyParser = require("body-parser");
 
 if (!process.env.DB_HOST) {
     throw new Error("Please specify the databse host using environment variable DB_HOST.");
@@ -11,6 +11,10 @@ if (!process.env.DB_NAME) {
     throw new Error("Please specify the name of the database using environment variable DB_NAME");
 }
 
+if (!process.env.RABBIT) {
+    throw new Error("Please specify the name of the RabbitMQ host using environment variable RABBIT");
+}
+
 const DB_HOST = process.env.DB_HOST;
 const DB_NAME = process.env.DB_NAME;
 const DB_USERNAME = process.env.DB_USERNAME;
@@ -18,20 +22,9 @@ const DB_PASSWORD = process.env.DB_PASSWORD;
 
 const RABBIT = process.env.RABBIT;
 
-function connectRabbit() {
-    console.log(`Connecting to RabbitMQ server at ${RABBIT}.`);
-
-    return amqp.connect(RABBIT).then(messagingConnection => {
-        console.log("Connected to RabbitMQ.");
-
-        return messagingConnection.createChannel();
-    });
-}
-
 function getDBUri() {
     return `mongodb://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}`;
 }
-
 function connectDb() {
     return mongodb.MongoClient.connect(getDBUri())
         .then(client => {
@@ -39,46 +32,28 @@ function connectDb() {
         });
 }
 
+function connectRabbit() {
+
+    console.log(`Connecting to RabbitMQ server at ${RABBIT}.`);
+
+    return amqp.connect(RABBIT)
+        .then(messagingConnection => {
+            console.log("Connected to RabbitMQ.");
+
+            return messagingConnection.createChannel();
+        });
+}
+
 function setupHandlers(app, db, messageChannel) {
-    const videosCollection = db.collection("videos");
 
-    app.post("/viewed", (req, res) => {
-        const videoPath = req.body.videoPath;
-        videosCollection.insertOne({ videoPath: videoPath })
-            .then(() => {
-                console.log(`Added video ${videoPath} to history.`);
-                res.sendStatus(200);
-            })
-            .catch(err => {
-                console.error(`Error adding video ${videoPath} to history.`);
-                console.error(err && err.stack || err);
-                res.sendStatus(500);
-            });
-    });
-
-    app.get("/history", (req, res) => {
-        const skip = parseInt(req.query.skip);
-        const limit = parseInt(req.query.limit);
-        videosCollection.find()
-            .skip(skip)
-            .limit(limit)
-            .toArray()
-            .then(documents => {
-                res.json({ history: documents });
-            })
-            .catch(err => {
-                console.error(`Error retrieving history from database.`);
-                console.error(err && err.stack || err);
-                res.sendStatus(500);
-            });
-    });
+    const historyCollection = db.collection("videos");
 
     function consumeViewedMessage(msg) {
-        console.log("Received a 'viewed' message");
-
         const parsedMsg = JSON.parse(msg.content.toString());
+        console.log("Received a 'viewed' message:");
+        console.log(JSON.stringify(parsedMsg, null, 4));
 
-        return videosCollection.insertOne({ videoPath: parsedMsg.videoPath })
+        return historyCollection.insertOne({ videoPath: parsedMsg.videoPath })
             .then(() => {
                 console.log("Acknowledging message was handled.");
                 messageChannel.ack(msg);
@@ -104,7 +79,7 @@ function startHttpServer(db, messageChannel) {
         app.use(bodyParser.json());
         setupHandlers(app, db, messageChannel);
 
-        const port = process.env.PORT && parseInt(process.env.PORT) || 3090;
+        const port = process.env.PORT && parseInt(process.env.PORT) || 3000;
         app.listen(port, () => {
             resolve();
         });
@@ -112,15 +87,17 @@ function startHttpServer(db, messageChannel) {
 }
 
 function main() {
-    return connectDb(getDBUri())
+    return connectDb()
         .then(db => {
-            return connectRabbit().then(messageChannel => {
-                return startHttpServer(db, messageChannel);
-            });
+            return connectRabbit()
+                .then(messageChannel => {
+                    return startHttpServer(db, messageChannel);
+                });
         });
 }
 
-main().then(() => console.log("Microservice online."))
+main()
+    .then(() => console.log("Microservice online."))
     .catch(err => {
         console.error("Microservice failed to start.");
         console.error(err && err.stack || err);

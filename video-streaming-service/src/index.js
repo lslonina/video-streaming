@@ -29,7 +29,11 @@ function connectRabbit() {
     return amqp.connect(RABBIT)
         .then(connection => {
             console.log("Connected to RabbitMQ.");
-            return connection.createChannel();
+            return connection.createChannel().then(messageChannel => {
+                return messageChannel.assertExchange("viewed", "fanout").then(() => {
+                    return messageChannel;
+                });
+            });
         });
 }
 function getDBUri() {

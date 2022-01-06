@@ -1,0 +1,22 @@
+{
+  "name": "video-recommendation-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./src/index.js",
+    "start:dev": "nodemon --legacy-watch ./src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "amqplib": "^0.8.0",
+    "express": "^4.17.2",
+    "mongodb": "^4.2.2",
+    "wait-port": "^0.2.9"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  }
+}
